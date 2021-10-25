@@ -1,0 +1,795 @@
+#include <pic16f1619.h>
+#include <xc.h>
+#include "Configuration_Header_File.h"
+
+//#define RS LATma                    /* PORTm pin a is used for Register Select */
+//#define EN LATnb                   /* PORTn pin b is used for Enable */
+
+#define RS LATBbits.LATB5      /* PORTm pin a is used for Register Select */
+#define EN LATBbits.LATB4      /* PORTn pin b is used for Enable */
+#define ldata LATC                      /* PORTy is used for transmitting data to LCD */
+#define LCD_Port TRISC            /* define macros for PORTm Direction Register */
+#define LCD_Control TRISB       /* define macros for PORTn Direction Register */
+
+#define motion PORTAbits.RA1
+
+//LCD Functions
+void LCD_Init();
+void LCD_Command(char);
+void LCD_Char(char x);
+void LCD_String(const char *);
+void LCD_String_xy(char ,char ,const char*);
+void MSdelay(unsigned int val);
+
+void motionDetection(void);
+void alarm(void);
+void setPassword(void);
+void checkSetPassword(void);
+void whichPassword(void);
+void readPassword(void);
+void checkPassword(void);
+void view(void);
+void checkView(void);
+void buzz(void);
+
+int whichPFlag = 0;
+int tempIdx = 0;
+int pFlag = 2;
+int alarmFlag = 0;
+int num = 0;
+int viewing = 0;
+
+char temp[16] = {' '};
+char whichP[16] = {' '};
+char countDown[16] = {' '};
+char attempt[16] = {' '};
+
+char p1[16] = {' '};
+char p2[16] = {' '};
+char p3[16] = {' '};
+char p4[16] = {' '};
+char p5[16] = {' '};
+
+int p1In = 1;
+int p2In = 1;
+int p3In = 1;
+int p4In = 1;
+int p5In = 1;
+
+
+
+
+/*****************************Main Program*******************************/
+void main(void)
+{       
+    TRISA = 0b00111100;
+    ANSELA = 0b00000000;
+    TRISB = 0b10000000;
+    ANSELB = 0b00000000;
+    LATB = 0b00000000;
+    //OSCCON = ?????;                                  /* Use Internal Oscillator with Frequency 8MHZ*/ 
+    LCD_Init();                       	             /* Initialize 16x2 LCD*/
+
+    int a = 0;
+    
+    while(1){
+       
+        
+        LCD_String_xy(1,0,"Armed           ");
+        motionDetection(); 
+        TRISA = 0b00111100;
+        checkSetPassword();
+        checkView();
+        
+        
+    
+        
+        //**********************************************************************
+        
+        
+    }
+}
+
+/****************************Functions********************************/
+
+//Buzz
+void buzz(void)
+{
+    TRISA = 0b00000000;
+    while(1)
+    {
+        LATA = 0b00100000;
+        MSdelay(0.01);
+        LATA = 0b00000000;
+        MSdelay(0.01);
+    }
+    
+    
+}
+
+//View attendance
+void view(void)
+{
+    LCD_Command(0x01);     /* clear display screen*/
+    
+    TRISB = 0b10000000;
+    while(1)
+    {
+        viewing = 1;
+        LCD_String_xy(1,0,"Which member?   ");
+        //1
+        LATB = 0b01000000;
+        LATA = 0b00000000;
+        if (PORTA == 0b00000100){
+            while(viewing)
+            {
+                LCD_String_xy(1,0,"Member 1 is     ");
+                if (p1In)
+                {
+                    LCD_String_xy(2,0,"Home            ");
+                }
+                else if(p1In == 0)
+                    
+                {
+                    LCD_String_xy(2,0,"Not home        ");
+                }
+                //B      
+                LATA = 0b00000001;
+                TRISB = 0b10000000;
+                LATB = 0b00000000;
+                if (PORTB == 0b10000000){
+                    LCD_Command(0x01);     /* clear display screen*/
+                    viewing = 0;
+                }
+            }
+        }
+
+        //2
+        LATB = 0b01000000;
+        LATA = 0b00000000;
+        if (PORTA == 0b00010000){
+            while(viewing)
+            {
+                LCD_String_xy(1,0,"Member 2 is     ");
+                if (p2In)
+                {
+                    LCD_String_xy(2,0,"Home            ");
+                }
+                else if(p2In == 0)
+                {
+                    LCD_String_xy(2,0,"Not home        ");
+                }
+                //B      
+                LATA = 0b00000001;
+                TRISB = 0b10000000;
+                LATB = 0b00000000;
+                if (PORTB == 0b10000000){
+                    LCD_Command(0x01);     /* clear display screen*/
+                    viewing = 0;
+                }
+            }
+        }
+
+        //3
+        LATB = 0b01000000;
+        LATA = 0b00000000;
+        if (PORTA == 0b00100000){
+            while(viewing)
+            {
+                LCD_String_xy(1,0,"Member 3 is     ");
+                if (p3In)
+                {
+                    LCD_String_xy(2,0,"Home            ");
+                }
+                else if(p3In == 0)
+                {
+                    LCD_String_xy(2,0,"Not home        ");
+                }
+                //B      
+                LATA = 0b00000001;
+                TRISB = 0b10000000;
+                LATB = 0b00000000;
+                if (PORTB == 0b10000000){
+                    LCD_Command(0x01);     /* clear display screen*/
+                    viewing = 0;
+                }
+            }
+        }
+
+        //4        
+        LATA = 0b00000001;
+        LATB = 0b00000000;
+        if (PORTA == 0b00000101){
+            while(viewing)
+            {
+                LCD_String_xy(1,0,"Member 4 is     ");
+                if (p4In)
+                {
+                    LCD_String_xy(2,0,"Home            ");
+                }
+                else if(p4In == 0)
+                {
+                    LCD_String_xy(2,0,"Not home        ");
+                }
+                //B      
+                LATA = 0b00000001;
+                TRISB = 0b10000000;
+                LATB = 0b00000000;
+                if (PORTB == 0b10000000){
+                    LCD_Command(0x01);     /* clear display screen*/
+                    viewing = 0;
+                }
+            }
+        }
+
+        //5       
+        LATA = 0b00000001;
+        if (PORTA == 0b00010001){
+            while(viewing)
+            {
+                LCD_String_xy(1,0,"Member 5 is     ");
+                if (p5In)
+                {
+                    LCD_String_xy(2,0,"Home            ");
+                }
+                else if(p5In == 0)
+                {
+                    LCD_String_xy(2,0,"Not home        ");
+                }
+                //B      
+                LATA = 0b00000001;
+                TRISB = 0b10000000;
+                LATB = 0b00000000;
+                if (PORTB == 0b10000000){
+                    LCD_Command(0x01);     /* clear display screen*/
+                    viewing = 0;
+                }
+            }
+        }
+        //C
+        LATA = 0b00000010;
+        LATB = 0b00000000;
+        TRISB = 0b10000000;
+        if (PORTA == 0b00000010 && PORTB == 0b10000000){
+            return;            
+        }
+    }
+}
+
+//Check attendance
+void checkView(void)
+{
+    //C
+    LATA = 0b00000010;
+    LATB = 0b00000000;
+    if (PORTA == 0b00000010 && PORTB == 0b10000000){
+        view();            
+    }
+}
+
+//Check Password
+void checkPassword(void)
+{
+    if (attempt[0] == p1[0] && attempt[1] == p1[1] && attempt[2] == p1[2] && attempt[3] == p1[3] && attempt[4] == p1[4])
+    {
+        if (p1In == 1)
+        {
+            p1In = 0;
+        }
+        else
+        {
+            p1In = 1;
+        }        
+        alarmFlag = 0;        
+    }
+    else if (attempt[0] == p2[0] && attempt[1] == p2[1] && attempt[2] == p2[2] && attempt[3] == p2[3] && attempt[4] == p2[4])
+    {
+        if (p2In == 1)
+        {
+            p2In = 0;
+        }
+        else
+        {
+            p2In = 1;
+        }
+        alarmFlag = 0;
+    }
+    else if (attempt[0] == p3[0] && attempt[1] == p3[1] && attempt[2] == p3[2] && attempt[3] == p3[3] && attempt[4] == p3[4])
+    {
+        
+        if (p3In == 1)
+        {
+            p3In = 0;
+        }
+        else
+        {
+            p3In = 1;
+        }
+        alarmFlag = 0;
+    }
+    else if (attempt[0] == p4[0] && attempt[1] == p4[1] && attempt[2] == p4[2] && attempt[3] == p4[3] && attempt[4] == p4[4])
+    {
+        if (p4In == 1)
+        {
+            p4In = 0;
+        }
+        else
+        {
+            p4In = 1;
+        }
+        alarmFlag = 0;
+    }
+    else if (attempt[0] == p5[0] && attempt[1] == p5[1] && attempt[2] == p5[2] && attempt[3] == p5[3] && attempt[4] == p5[4])
+    {
+        if (p5In == 1)
+        {
+            p5In = 0;
+        }
+        else
+        {
+            p5In = 1;
+        }
+        alarmFlag = 0;
+    }
+    if (alarmFlag == 1)
+    {
+        LCD_String_xy(2,0,"Incorrect       ");  
+        attempt[0] = ' ';attempt[1] = ' ';attempt[2] = ' ';attempt[3] = ' ';attempt[4] = ' ';attempt[5] = ' ';attempt[6] = ' ';attempt[7] = ' ';
+        attempt[8] = ' ';attempt[9] = ' ';attempt[10] = ' ';attempt[11] = ' ';attempt[12] = ' ';attempt[13] = ' ';attempt[14] = ' ';attempt[15] = ' ';
+        tempIdx = 0;
+        MSdelay(5);
+        LCD_Command(0x01);     /* clear display screen*/        
+    }
+}
+
+//Read attempt
+//void readPassword(void)
+//{
+    
+//}
+
+//Check set password
+void checkSetPassword(void)
+{
+    //B      
+    LATA = 0b00000001;
+    LATB = 0b00000000;
+    TRISB =  0b10000000;
+    if (PORTB == 0b10000000){
+        whichPassword();
+        setPassword();
+    }
+}
+
+//Which Password
+void whichPassword(void)
+{
+    LCD_Command(0x01);     /* clear display screen*/
+    whichPFlag = 0;
+    while(1)
+    {
+        //1
+        LATB = 0b01000000;
+        LATA = 0b00000000;
+        if (PORTA == 0b00000100){
+            pFlag = 1;
+            whichP[0] = '1';
+            whichPFlag = 1;
+        }
+
+        //2
+        LATB = 0b01000000;
+        LATA = 0b00000000;
+        if (PORTA == 0b00010000){
+            pFlag = 2;
+            whichP[0] = '2';
+            whichPFlag = 1;
+        }
+
+        //3
+        LATB = 0b01000000;
+        LATA = 0b00000000;
+        if (PORTA == 0b00100000){
+            pFlag = 3;
+            whichP[0] = '3';
+            whichPFlag = 1;
+        }
+
+        //4        
+        LATA = 0b00000001;
+        LATB = 0b00000000;
+        if (PORTA == 0b00000101){
+            pFlag = 4;
+            whichP[0] = '4';
+            whichPFlag = 1;
+        }
+
+        //5       
+        LATA = 0b00000001;
+        if (PORTA == 0b00010001){
+            pFlag = 5;
+            whichP[0] = '5';
+            whichPFlag = 1;
+        }
+        
+        //C      
+        LATA = 0b00000010;
+        LATB = 0b00000000;
+        if (PORTA == 0b00000010 && PORTB == 0b10000000){
+            pFlag = 0;
+            whichP[0] = ' ';
+            whichPFlag = 0;            
+        }
+        
+        //A     
+        TRISB = 0b10000000;
+        LATB = 0b01000000;
+        if (PORTB == 0b11000000){
+            if (whichPFlag)
+            {                
+                return;
+            }           
+        }
+    LCD_String_xy(1,0,"Which password? ");
+    LCD_String_xy(2,0,whichP);
+    }    
+}
+
+//Set Password
+void setPassword(void)
+{
+    LCD_Command(0x01);     /* clear display screen*/
+    TRISB = 0b10000000;
+    tempIdx = 0;
+    temp[0] = ' ';temp[1] = ' ';temp[2] = ' ';temp[3] = ' ';temp[4] = ' ';temp[5] = ' ';temp[6] = ' ';temp[7] = ' ';temp[8] = ' ';temp[9] = ' ';
+    temp[10] = ' ';temp[11] = ' ';temp[12] = ' ';temp[13] = ' ';temp[14] = ' ';temp[15] = ' ';
+    while(1)    
+    {
+        if (tempIdx < 5)
+        {
+            //1
+            LATB = 0b01000000;
+            LATA = 0b00000000;
+            if (PORTA == 0b00000100){
+                temp[tempIdx] = '1';
+                tempIdx = tempIdx + 1;
+            }
+
+            //2
+            LATB = 0b01000000;
+            LATA = 0b00000000;
+            if (PORTA == 0b00010000){
+                temp[tempIdx] = '2';
+                tempIdx = tempIdx + 1;
+            }
+
+            //3
+            LATB = 0b01000000;
+            LATA = 0b00000000;
+            if (PORTA == 0b00100000){
+                temp[tempIdx] = '3';
+                tempIdx = tempIdx + 1;
+            }
+            
+            //4        
+            LATA = 0b00000001;
+            LATB = 0b00000000;
+            if (PORTA == 0b00000101){
+                temp[tempIdx] = '4';
+                tempIdx = tempIdx + 1;
+            }
+
+            //5       
+            LATA = 0b00000001;
+            if (PORTA == 0b00010001){
+                temp[tempIdx] = '5';
+                tempIdx = tempIdx + 1;
+            }
+
+            //6       
+            LATA = 0b00000001;
+            if (PORTA == 0b00100001){
+                temp[tempIdx] = '6';
+                tempIdx = tempIdx + 1;
+            }
+
+            //B      
+            LATA = 0b00000001;
+            if (PORTB == 0b10000000){
+                temp[tempIdx] = 'B';
+                tempIdx = tempIdx + 1;
+            }
+
+            //7      
+            LATA = 0b00000010;
+            if (PORTA == 0b00000110){
+                temp[tempIdx] = '7';
+                tempIdx = tempIdx + 1;
+            }
+
+            //8      
+            LATA = 0b00000010;
+            if (PORTA == 0b00010010){
+                temp[tempIdx] = '8';
+                tempIdx = tempIdx + 1;
+            }
+
+            //9      
+            LATA = 0b00000010;
+            if (PORTA == 0b00100010){
+                temp[tempIdx] = '9';
+                tempIdx = tempIdx + 1;
+            }
+        }
+        //C      
+        LATA = 0b00000010;
+        LATB = 0b00000000;
+        if (PORTA == 0b00000010 && PORTB == 0b10000000){
+            tempIdx = tempIdx - 1;
+            temp[tempIdx] = ' ';            
+        }
+        //A
+        LATB = 0b01000000;
+        if (PORTB == 0b11000000){
+            if (tempIdx == 5)
+            {
+                if (pFlag == 1)
+                {
+                    p1[0] = temp[0];
+                    p1[1] = temp[1];
+                    p1[2] = temp[2];
+                    p1[3] = temp[3];
+                    p1[4] = temp[4];
+                }
+                else if (pFlag == 2)
+                {
+                    p2[0] = temp[0];
+                    p2[1] = temp[1];
+                    p2[2] = temp[2];
+                    p2[3] = temp[3];
+                    p2[4] = temp[4];
+                }
+                else if (pFlag == 3)
+                {
+                    p3[0] = temp[0];
+                    p3[1] = temp[1];
+                    p3[2] = temp[2];
+                    p3[3] = temp[3];
+                    p3[4] = temp[4];
+                }
+                else if (pFlag == 4)
+                {
+                    p4[0] = temp[0];
+                    p4[1] = temp[1];
+                    p4[2] = temp[2];
+                    p4[3] = temp[3];
+                    p4[4] = temp[4];
+                }
+                else if (pFlag == 5)
+                {
+                    p5[0] = temp[0];
+                    p5[1] = temp[1];
+                    p5[2] = temp[2];
+                    p5[3] = temp[3];
+                    p5[4] = temp[4];
+                }
+                LCD_Command(0x01);     /* clear display screen*/
+                return;
+            }
+        }
+        LCD_String_xy(1,0,"Set password    ");
+        LCD_String_xy(2,0,temp);
+    }
+    
+}
+
+//Motion Detection
+void motionDetection(void)
+{   
+    TRISA = 0b00000010;
+    LATA = 0b00000000;
+    if (motion)
+    {          
+        alarm();
+        //checkPassword();
+    }
+}
+
+//alarm
+void alarm(void)
+{   
+    LCD_Command(0x01);     /* clear display screen*/
+    TRISB = 0b10000000;
+    TRISA = 0b00111100;
+    tempIdx = 0;
+//    attempt[16] = ' ';
+    alarmFlag = 1;
+    num = 0;    
+    attempt[0] = ' ';attempt[1] = ' ';attempt[2] = ' ';attempt[3] = ' ';attempt[4] = ' ';attempt[5] = ' ';attempt[6] = ' ';attempt[7] = ' ';
+    attempt[8] = ' ';attempt[9] = ' ';attempt[10] = ' ';attempt[11] = ' ';attempt[12] = ' ';attempt[13] = ' ';attempt[14] = ' ';attempt[15] = ' ';
+    while(alarmFlag)    
+    {
+        if (tempIdx < 5)
+        {
+            //1
+            LATB = 0b01000000;
+            LATA = 0b00000000;
+            if (PORTA == 0b00000100){
+                attempt[tempIdx] = '1';
+                tempIdx = tempIdx + 1;
+            }
+
+            //2
+            LATB = 0b01000000;
+            LATA = 0b00000000;
+            if (PORTA == 0b00010000){
+                attempt[tempIdx] = '2';
+                tempIdx = tempIdx + 1;
+            }
+
+            //3
+            LATB = 0b01000000;
+            LATA = 0b00000000;
+            if (PORTA == 0b00100000){
+                attempt[tempIdx] = '3';
+                tempIdx = tempIdx + 1;
+            }
+            
+            //4        
+            LATA = 0b00000001;
+            LATB = 0b00000000;
+            if (PORTA == 0b00000101){
+                attempt[tempIdx] = '4';
+                tempIdx = tempIdx + 1;
+            }
+
+            //5       
+            LATA = 0b00000001;
+            if (PORTA == 0b00010001){
+                attempt[tempIdx] = '5';
+                tempIdx = tempIdx + 1;
+            }
+
+            //6       
+            LATA = 0b00000001;
+            if (PORTA == 0b00100001){
+                attempt[tempIdx] = '6';
+                tempIdx = tempIdx + 1;
+            }
+
+            //B      
+            LATA = 0b00000001;
+            if (PORTB == 0b10000000){
+                attempt[tempIdx] = 'B';
+                tempIdx = tempIdx + 1;
+            }
+
+            //7      
+            LATA = 0b00000010;
+            if (PORTA == 0b00000110){
+                attempt[tempIdx] = '7';
+                tempIdx = tempIdx + 1;
+            }
+
+            //8      
+            LATA = 0b00000010;
+            if (PORTA == 0b00010010){
+                attempt[tempIdx] = '8';
+                tempIdx = tempIdx + 1;
+            }
+
+            //9      
+            LATA = 0b00000010;
+            if (PORTA == 0b00100010){
+                attempt[tempIdx] = '9';
+                tempIdx = tempIdx + 1;
+            }
+        }
+        //C      
+        LATA = 0b00000010;
+        LATB = 0b00000000;
+        if (PORTA == 0b00000010 && PORTB == 0b10000000){
+            tempIdx = tempIdx - 1;
+            attempt[tempIdx] = ' ';            
+        }
+        //A
+        LATB = 0b01000000;
+        if (PORTB == 0b11000000){
+            if (tempIdx == 5)
+            {                
+                LCD_Command(0x01);     /* clear display screen*/
+                checkPassword();
+            }
+        }
+        LCD_String_xy(1,0,"Enter password  ");
+        LCD_String_xy(2,0,attempt);
+        
+        
+        num = num + 1;
+        if (num > 20)
+        {
+            buzz();
+        }
+    }
+    LCD_Command(0x01);     /* clear display screen*/
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//LCD Functions
+void LCD_Init()
+{
+    MSdelay(15);                      /* LCD 16x2 Power on delay for 15 ms */
+    LCD_Port = 0x00;             /* Set PORTn as output PORT for LCD data(D0-D7) pins*/
+    LCD_Control = 0x00;        /* Set PORTm as output PORT LCD Control(RS,EN) Pins*/
+    LCD_Command(0x38);     /* uses 2 line and initialize 5*7 matrix of LCD in 8-bit mode*/
+    LCD_Command(0x01);     /* clear display screen*/
+    LCD_Command(0x0c);     /* display on cursor off*/
+    LCD_Command(0x06);     /* increment cursor (shift cursor to right)*/
+
+}
+
+void LCD_Command(char cmd)
+{
+	ldata= cmd;            /* Send data to PORT as a command for LCD*/   
+	RS = 0;                   /* Command Register is selected*/
+	EN = 1;                  /* High-to-Low pulse on Enable pin to latch data*/ 
+    	asm("nop");
+	EN = 0;
+	MSdelay(3);	
+}
+
+void LCD_Char(char dat)
+{
+	ldata= dat;            /* Send data to LCD*/  
+	RS = 1;                /* Data Register is selected*/
+	EN=1;                 /* High-to-Low pulse on Enable pin to latch data*/   
+    	asm("nop");
+	EN=0;
+   	MSdelay(1);
+}
+
+void LCD_String(const char *msg)
+{
+	while((*msg)!=0)
+	{		
+	  LCD_Char(*msg);
+	  msg++;	
+    }	
+}
+
+void LCD_String_xy(char row,char pos,const char *msg)
+{
+    char location=0;
+    if(row<=1)
+    {
+        location=(0x80) | ((pos) & 0x0f);      /*Print message on 1st row and desired location*/
+        LCD_Command(location);
+    }
+    else
+    {
+        location=(0xC0) | ((pos) & 0x0f);      /*Print message on 2nd row and desired location*/
+        LCD_Command(location);    
+    }  
+    LCD_String(msg);
+
+}
+/*********************************Delay Function********************************/
+void MSdelay(unsigned int val)
+{
+     unsigned int i,j;
+        for(i=0;i<=val;i++)
+            for(j=0;j<81;j++);      /*This count Provide delay of 1 ms for 8MHz Frequency */
+ }
